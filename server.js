@@ -6,7 +6,7 @@ const { loadMenu, getMenuFromCache } = require('./src/utils/menuLoader');
 const { adminRouter, apiRouter } = require('./src/routes/admin');
 const webhookRouter = require('./src/routes/webhook');
 
-const DEMO_TENANT_NUMBER = '+56900000000';
+const DEMO_TENANT_NUMBER = process.env.DEMO_TENANT_NUMBER || '+56900000000';
 
 const app = express();
 const PORT = process.env.PORT || 3000;

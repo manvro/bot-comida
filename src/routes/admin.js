@@ -11,7 +11,7 @@ const {
 } = require('../db/queries');
 const { logHandoff } = require('../utils/handoffLogger');
 
-const DEMO_TENANT_NUMBER = '+56900000000';
+const DEMO_TENANT_NUMBER = process.env.DEMO_TENANT_NUMBER || '+56900000000';
 const VALID_STATUSES = ['pending', 'confirmed', 'cancelled'];
 
 function requireAdmin(req, res, next) {
