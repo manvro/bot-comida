@@ -1,0 +1,82 @@
+const { STATES } = require('./states');
+
+function formatPrice(price) {
+  return `$${price}`;
+}
+
+function formatMenu(items) {
+  if (!items || items.length === 0) {
+    return 'No hay ítems disponibles en el menú por ahora.';
+  }
+
+  const grouped = {};
+  items.forEach((item, idx) => {
+    const cat = item.category || 'Otros';
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push({ ...item, number: idx + 1 });
+  });
+
+  const lines = ['Este es nuestro menú:', ''];
+  for (const [cat, list] of Object.entries(grouped)) {
+    lines.push(`*${cat}*`);
+    for (const it of list) {
+      lines.push(`${it.number}. ${it.name} - ${formatPrice(it.price)}`);
+    }
+    lines.push('');
+  }
+  lines.push('Respondé con el número del ítem que querés.');
+  return lines.join('\n').trim();
+}
+
+function formatOrderLines(order) {
+  let total = 0;
+  const lines = [];
+  for (const it of order) {
+    const subtotal = it.price * it.quantity;
+    total += subtotal;
+    lines.push(`- ${it.quantity}x ${it.name} - ${formatPrice(subtotal)}`);
+  }
+  return { lines: lines.join('\n'), total };
+}
+
+function getResponse(state, data = {}) {
+  switch (state) {
+    case STATES.GREETING:
+      return '¡Hola! Bienvenido. ¿Querés hacer un pedido?';
+
+    case STATES.MENU:
+      return formatMenu(data.items || []);
+
+    case STATES.ORDERING: {
+      const { lines, total } = formatOrderLines(data.order || []);
+      const intro = data.lastItem
+        ? `Agregué *${data.lastItem.name}* a tu pedido.\n\n`
+        : '';
+      return (
+        `${intro}Tu pedido hasta ahora:\n${lines}\n\n` +
+        `Total parcial: ${formatPrice(total)}\n\n` +
+        '¿Querés agregar algo más? Mandá otro número, o escribí *confirmar* para terminar.'
+      );
+    }
+
+    case STATES.CONFIRM: {
+      const { lines, total } = formatOrderLines(data.order || []);
+      return (
+        `Tu pedido:\n${lines}\n\n` +
+        `Total: ${formatPrice(total)}\n\n` +
+        '¿Confirmás? (sí / no)'
+      );
+    }
+
+    case STATES.DONE:
+      return `¡Listo! Pedido #${data.orderId} registrado. Te avisaremos cuando esté listo. ¡Gracias!`;
+
+    case STATES.PAUSED:
+      return 'Un momento, te conecto con una persona del local. Te respondemos en breve.';
+
+    default:
+      return '';
+  }
+}
+
+module.exports = { getResponse };

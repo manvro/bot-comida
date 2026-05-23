@@ -1,0 +1,6 @@
+{
+  "name": "bot-comida-panel",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Panel web del dueño para el bot de WhatsApp (despliega en Vercel)"
+}

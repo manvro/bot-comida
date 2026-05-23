@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(npm install *)",
+      "PowerShell(node src/db/test-db.js)",
+      "PowerShell(npm audit *)",
+      "PowerShell(node server.js)",
+      "PowerShell(node src/bot/test-conversation.js)",
+      "Skill(claude-api)",
+      "PowerShell(node -e \"require\\('dotenv'\\).config\\(\\); require\\('./src/routes/webhook'\\); require\\('./src/utils/twilioSender'\\); console.log\\('webhook + twilioSender cargados OK'\\)\")",
+      "Bash(node *)",
+      "PowerShell(curl.exe -s -X POST \"http://localhost:3000/webhook\" --data-urlencode \"From=whatsapp:+56911112222\" --data-urlencode \"To=whatsapp:+56900000000\" --data-urlencode \"Body=hola\")",
+      "PowerShell(node -e \"const db=require\\('./src/db/database'\\); const r=db.prepare\\('SELECT phone, state, paused, context FROM conversations WHERE phone=?'\\).get\\('+56911112222'\\); console.log\\(r\\)\")",
+      "PowerShell(node -e \"require\\('dotenv'\\).config\\(\\); const r = require\\('./src/routes/admin'\\); console.log\\('adminRouter capas:', r.adminRouter.stack.length, '| apiRouter capas:', r.apiRouter.stack.length\\)\")",
+      "PowerShell(curl.exe -s -H \"Authorization: Bearer admin123\" \"http://localhost:3000/api/orders\" | Out-String | ForEach-Object { if \\($_.Length -gt 2000\\) { $_.Substring\\(0, 2000\\) + '...[truncado]' } else { $_ } })",
+      "PowerShell(curl.exe -s -X PUT -H \"Authorization: Bearer admin123\" -H \"Content-Type: application/json\" -d '{\\\\\"status\\\\\":\\\\\"confirmed\\\\\"}' \"http://localhost:3000/api/orders/9/status\")",
+      "PowerShell(curl.exe -s \"http://localhost:3000/\" | Select-String -Pattern \"<title>\", \"Panel de Control\", \"ADMIN_TOKEN\" | ForEach-Object { $_.Line.Trim\\(\\) })",
+      "PowerShell(\"Sin token:\"; curl.exe -s -o nul -w \"  HTTP %{http_code}`n\" \"http://localhost:3000/api/orders\"; \"Status inválido:\"; curl.exe -s -X PUT -H \"Authorization: Bearer admin123\" -H \"Content-Type: application/json\" -d '{\\\\\"status\\\\\":\\\\\"banana\\\\\"}' \"http://localhost:3000/api/orders/9/status\"; \"Pedido inexistente:\"; curl.exe -s -X PUT -H \"Authorization: Bearer admin123\" -H \"Content-Type: application/json\" -d '{\\\\\"status\\\\\":\\\\\"pending\\\\\"}' \"http://localhost:3000/api/orders/9999/status\")"
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "https://REEMPLAZAR-URL-DEL-BOT.up.railway.app/api/$1" },
+    { "source": "/admin/(.*)", "destination": "https://REEMPLAZAR-URL-DEL-BOT.up.railway.app/admin/$1" },
+    { "source": "/menu", "destination": "https://REEMPLAZAR-URL-DEL-BOT.up.railway.app/menu" }
+  ]
+}

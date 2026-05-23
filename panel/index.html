@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel de Control — Bot Comida</title>
+
+  <!--
+    Configuración de la URL del bot:
+    - Si en Vercel usás rewrites (panel/vercel.json), dejá API_BASE_URL = '' y el panel hace fetch a paths relativos.
+    - Si no usás rewrites, definí window.API_BASE_URL aquí con la URL del bot en Railway
+      y agregá CORS al bot. Ejemplo:
+      <script>window.API_BASE_URL = 'https://tu-bot.up.railway.app';</script>
+    - Si no se define nada, el fallback es http://localhost:3000 (útil para abrir este HTML local contra el bot local).
+  -->
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #eaeaea;
+      line-height: 1.4;
+    }
+    header {
+      background: #0f3460;
+      padding: 18px 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+    }
+    main {
+      padding: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    section {
+      background: #16213e;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    section h2 {
+      margin: 0 0 14px 0;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: #a0b3d8;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      vertical-align: top;
+    }
+    th {
+      font-weight: 600;
+      color: #8fa5cf;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    tr.status-pending   { background: rgba(255, 200, 50, 0.10); }
+    tr.status-confirmed { background: rgba(60, 200, 120, 0.10); }
+    tr.status-cancelled { background: rgba(220, 80, 80, 0.10); }
+    tr.status-cancelled td:not(:last-child) { text-decoration: line-through; opacity: 0.7; }
+    select, button {
+      font-family: inherit;
+      font-size: 13px;
+      padding: 6px 10px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: #0f3460;
+      color: #eaeaea;
+      cursor: pointer;
+    }
+    select:focus, button:focus { outline: 2px solid #6c8cd5; outline-offset: 1px; }
+    button:hover { background: #1c4a85; }
+    .empty {
+      color: #7a8aa8;
+      font-style: italic;
+      padding: 8px 0;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+    }
+    .card {
+      background: #0f3460;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      padding: 14px;
+    }
+    .card .phone {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 6px;
+      color: #cde0ff;
+    }
+    .card .meta {
+      font-size: 12px;
+      color: #8fa5cf;
+      margin-bottom: 10px;
+    }
+    .card button { width: 100%; }
+    .menu-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      font-size: 14px;
+    }
+    .menu-list li {
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .menu-list li:last-child { border-bottom: none; }
+    .menu-cat {
+      color: #8fa5cf;
+      font-size: 12px;
+    }
+    .menu-price {
+      color: #cde0ff;
+      font-variant-numeric: tabular-nums;
+    }
+    footer {
+      padding: 14px 24px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: #8fa5cf;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .error-banner {
+      background: rgba(220, 80, 80, 0.20);
+      color: #ffb3b3;
+      padding: 10px 24px;
+      font-size: 13px;
+      display: none;
+    }
+    .error-banner.show { display: block; }
+    @media (max-width: 600px) {
+      main { padding: 14px; }
+      table { font-size: 13px; }
+      th, td { padding: 8px; }
+      footer { flex-direction: column; gap: 8px; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Panel de Control — Bot Comida</h1>
+  </header>
+
+  <div class="error-banner" id="errorBanner"></div>
+
+  <main>
+    <section>
+      <h2>Pedidos de hoy</h2>
+      <div id="ordersContainer">
+        <p class="empty">Cargando…</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Conversaciones pausadas (esperando humano)</h2>
+      <div id="pausedContainer">
+        <p class="empty">Cargando…</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Menú activo hoy</h2>
+      <div id="menuContainer">
+        <p class="empty">Cargando…</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Última actualización: <span id="updatedAt">—</span></span>
+    <button onclick="refreshAll()">Actualizar ahora</button>
+  </footer>
+
+  <script>
+    const ADMIN_TOKEN = 'admin123';
+    const REFRESH_MS = 20000;
+
+    // En Vercel con rewrites: window.API_BASE_URL = '' (string vacío → paths relativos)
+    // En Vercel sin rewrites: window.API_BASE_URL = 'https://tu-bot.up.railway.app'
+    // En dev local sin definir nada: fallback a http://localhost:3000
+    const API_BASE_URL = (typeof window !== 'undefined' && window.API_BASE_URL !== undefined)
+      ? window.API_BASE_URL
+      : 'http://localhost:3000';
+
+    function authHeaders(extra = {}) {
+      return { Authorization: 'Bearer ' + ADMIN_TOKEN, ...extra };
+    }
+
+    async function apiGet(path) {
+      const r = await fetch(API_BASE_URL + path, { headers: authHeaders() });
+      if (!r.ok) throw new Error(path + ' -> HTTP ' + r.status);
+      return r.json();
+    }
+
+    async function apiSend(path, method, body) {
+      const r = await fetch(API_BASE_URL + path, {
+        method,
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) throw new Error(path + ' -> HTTP ' + r.status);
+      return r.json();
+    }
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function formatTime(sqliteUtc) {
+      if (!sqliteUtc) return '—';
+      const iso = sqliteUtc.replace(' ', 'T') + 'Z';
+      return new Date(iso).toLocaleTimeString();
+    }
+
+    function formatItems(items) {
+      if (!Array.isArray(items) || items.length === 0) return '—';
+      return items.map(i => `${i.quantity}x ${i.name}`).join(', ');
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('errorBanner');
+      el.textContent = msg;
+      el.classList.add('show');
+    }
+    function clearError() {
+      const el = document.getElementById('errorBanner');
+      el.textContent = '';
+      el.classList.remove('show');
+    }
+
+    function renderOrders(orders) {
+      const c = document.getElementById('ordersContainer');
+      if (!orders || orders.length === 0) {
+        c.innerHTML = '<p class="empty">No hay pedidos hoy.</p>';
+        return;
+      }
+      const rows = orders.map(o => {
+        const opts = ['pending', 'confirmed', 'cancelled']
+          .map(s => `<option value="${s}"${s === o.status ? ' selected' : ''}>${s}</option>`)
+          .join('');
+        return `
+          <tr class="status-${escapeHtml(o.status)}">
+            <td>#${o.id}</td>
+            <td>${escapeHtml(o.phone)}</td>
+            <td>${escapeHtml(formatItems(o.items))}</td>
+            <td>$${o.total}</td>
+            <td><select onchange="changeStatus(${o.id}, this.value, this)">${opts}</select></td>
+            <td>${formatTime(o.created_at)}</td>
+          </tr>
+        `;
+      }).join('');
+      c.innerHTML = `
+        <table>
+          <thead>
+            <tr><th>#</th><th>Teléfono</th><th>Ítems</th><th>Total</th><th>Estado</th><th>Hora</th></tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+
+    function renderPaused(list) {
+      const c = document.getElementById('pausedContainer');
+      if (!list || list.length === 0) {
+        c.innerHTML = '<p class="empty">No hay conversaciones pausadas.</p>';
+        return;
+      }
+      c.innerHTML = '<div class="cards">' + list.map(p => `
+        <div class="card">
+          <div class="phone">${escapeHtml(p.phone)}</div>
+          <div class="meta">Estado: ${escapeHtml(p.state || '—')}</div>
+          <div class="meta">Pausada: ${formatTime(p.updated_at)}</div>
+          <button onclick="resumeConv('${escapeHtml(p.phone)}')">Reanudar</button>
+        </div>
+      `).join('') + '</div>';
+    }
+
+    function renderMenu(payload) {
+      const c = document.getElementById('menuContainer');
+      const items = payload && payload.items;
+      if (!items || items.length === 0) {
+        c.innerHTML = '<p class="empty">No hay ítems disponibles.</p>';
+        return;
+      }
+      c.innerHTML = '<ul class="menu-list">' + items.map(i => `
+        <li>
+          <span>${escapeHtml(i.name)} <span class="menu-cat">${escapeHtml(i.category || '')}</span></span>
+          <span class="menu-price">$${i.price}</span>
+        </li>
+      `).join('') + '</ul>';
+    }
+
+    async function changeStatus(id, status, selectEl) {
+      try {
+        await apiSend(`/api/orders/${id}/status`, 'PUT', { status });
+        const tr = selectEl.closest('tr');
+        tr.className = 'status-' + status;
+        clearError();
+      } catch (e) {
+        showError('No pude actualizar el estado del pedido #' + id + ': ' + e.message);
+      }
+    }
+
+    async function resumeConv(phone) {
+      try {
+        await apiSend('/admin/resume', 'POST', { phone });
+        clearError();
+        refreshAll();
+      } catch (e) {
+        showError('No pude reanudar ' + phone + ': ' + e.message);
+      }
+    }
+
+    async function refreshAll() {
+      try {
+        const [orders, paused, menu] = await Promise.all([
+          apiGet('/api/orders'),
+          apiGet('/admin/paused'),
+          fetch(API_BASE_URL + '/menu').then(r => r.json()),
+        ]);
+        renderOrders(orders);
+        renderPaused(paused);
+        renderMenu(menu);
+        document.getElementById('updatedAt').textContent = new Date().toLocaleTimeString();
+        clearError();
+      } catch (e) {
+        showError('Error al refrescar: ' + e.message);
+      }
+    }
+
+    refreshAll();
+    setInterval(refreshAll, REFRESH_MS);
+  </script>
+</body>
+</html>
