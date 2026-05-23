@@ -24,7 +24,7 @@ function formatMenu(items) {
     }
     lines.push('');
   }
-  lines.push('Respondé con el número del ítem que querés.');
+  lines.push('Responde con el número del ítem que quieres.');
   return lines.join('\n').trim();
 }
 
@@ -42,7 +42,7 @@ function formatOrderLines(order) {
 function getResponse(state, data = {}) {
   switch (state) {
     case STATES.GREETING:
-      return '¡Hola! Bienvenido. ¿Querés hacer un pedido?';
+      return '¡Hola! Bienvenido. ¿Quieres hacer un pedido?';
 
     case STATES.MENU:
       return formatMenu(data.items || []);
@@ -55,7 +55,7 @@ function getResponse(state, data = {}) {
       return (
         `${intro}Tu pedido hasta ahora:\n${lines}\n\n` +
         `Total parcial: ${formatPrice(total)}\n\n` +
-        '¿Querés agregar algo más? Mandá otro número, o escribí *confirmar* para terminar.'
+        '¿Quieres agregar algo más? Manda otro número, o escribe *confirmar* para terminar.'
       );
     }
 
@@ -64,7 +64,7 @@ function getResponse(state, data = {}) {
       return (
         `Tu pedido:\n${lines}\n\n` +
         `Total: ${formatPrice(total)}\n\n` +
-        '¿Confirmás? (sí / no)'
+        '¿Confirmas? (sí / no)'
       );
     }
 

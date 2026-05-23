@@ -5,7 +5,7 @@ const MODEL = 'claude-haiku-4-5';
 const MAX_TOKENS = 300;
 
 const FALLBACK_ERROR_TEXT =
-  "Lo siento, tuve un problema técnico. Escribí 'hola' para reintentar.";
+  "Lo siento, tuve un problema técnico. Escribe 'hola' para reintentar.";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -24,14 +24,14 @@ function buildSystemPrompt(menuItems, conversationContext) {
       : null;
 
   const parts = [
-    'Sos un asistente de pedidos por WhatsApp para un restaurante.',
+    'Eres un asistente de pedidos por WhatsApp para un restaurante.',
     '',
     'Reglas estrictas:',
-    '- Hablá SOLO del menú de abajo. NO inventes ítems ni precios que no estén en la lista.',
-    '- Si el cliente pregunta por algo que no está en el menú, decílo claramente.',
-    '- Si el cliente quiere hacer un pedido, indicale que escriba el NÚMERO del ítem del menú.',
-    '- Si el cliente pregunta algo no relacionado al restaurante, redirigilo amablemente al pedido.',
-    '- Respondé en español, máximo 3 líneas. Es WhatsApp, sé breve y directo.',
+    '- Habla SOLO del menú de abajo. NO inventes ítems ni precios que no estén en la lista.',
+    '- Si el cliente pregunta por algo que no está en el menú, díselo claramente.',
+    '- Si el cliente quiere hacer un pedido, indícale que escriba el NÚMERO del ítem del menú.',
+    '- Si el cliente pregunta algo no relacionado al restaurante, redirigelo amablemente al pedido.',
+    '- Responde en español chileno, máximo 3 líneas. Es WhatsApp, sé breve y directo.',
     '- No uses emojis.',
     '',
     'Menú actual disponible:',
