@@ -58,7 +58,7 @@ if (tenantCount === 0) {
   db.prepare(`
     INSERT INTO tenants (name, whatsapp_number, active)
     VALUES (?, ?, 1)
-  `).run('Restaurante Demo', '+56900000000');
+  `).run('Restaurante Demo', process.env.DEMO_TENANT_NUMBER || '+56900000000');
   console.log('[db] Tenant demo creado.');
 }
 
