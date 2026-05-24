@@ -15,7 +15,8 @@
       "PowerShell(curl.exe -s -H \"Authorization: Bearer admin123\" \"http://localhost:3000/api/orders\" | Out-String | ForEach-Object { if \\($_.Length -gt 2000\\) { $_.Substring\\(0, 2000\\) + '...[truncado]' } else { $_ } })",
       "PowerShell(curl.exe -s -X PUT -H \"Authorization: Bearer admin123\" -H \"Content-Type: application/json\" -d '{\\\\\"status\\\\\":\\\\\"confirmed\\\\\"}' \"http://localhost:3000/api/orders/9/status\")",
       "PowerShell(curl.exe -s \"http://localhost:3000/\" | Select-String -Pattern \"<title>\", \"Panel de Control\", \"ADMIN_TOKEN\" | ForEach-Object { $_.Line.Trim\\(\\) })",
-      "PowerShell(\"Sin token:\"; curl.exe -s -o nul -w \"  HTTP %{http_code}`n\" \"http://localhost:3000/api/orders\"; \"Status inválido:\"; curl.exe -s -X PUT -H \"Authorization: Bearer admin123\" -H \"Content-Type: application/json\" -d '{\\\\\"status\\\\\":\\\\\"banana\\\\\"}' \"http://localhost:3000/api/orders/9/status\"; \"Pedido inexistente:\"; curl.exe -s -X PUT -H \"Authorization: Bearer admin123\" -H \"Content-Type: application/json\" -d '{\\\\\"status\\\\\":\\\\\"pending\\\\\"}' \"http://localhost:3000/api/orders/9999/status\")"
+      "PowerShell(\"Sin token:\"; curl.exe -s -o nul -w \"  HTTP %{http_code}`n\" \"http://localhost:3000/api/orders\"; \"Status inválido:\"; curl.exe -s -X PUT -H \"Authorization: Bearer admin123\" -H \"Content-Type: application/json\" -d '{\\\\\"status\\\\\":\\\\\"banana\\\\\"}' \"http://localhost:3000/api/orders/9/status\"; \"Pedido inexistente:\"; curl.exe -s -X PUT -H \"Authorization: Bearer admin123\" -H \"Content-Type: application/json\" -d '{\\\\\"status\\\\\":\\\\\"pending\\\\\"}' \"http://localhost:3000/api/orders/9999/status\")",
+      "Bash(npm install *)"
     ]
   }
 }

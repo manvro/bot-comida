@@ -1,6 +1,7 @@
 require('dotenv').config();
 const path = require('path');
 const express = require('express');
+const cors = require('cors');
 const { getTenantByNumber } = require('./src/db/queries');
 const { loadMenu, getMenuFromCache } = require('./src/utils/menuLoader');
 const { adminRouter, apiRouter } = require('./src/routes/admin');
@@ -10,6 +11,12 @@ const DEMO_TENANT_NUMBER = process.env.DEMO_TENANT_NUMBER || '+56900000000';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+app.use(cors({
+  origin: ['https://bot-comida.vercel.app', 'http://localhost:3000'],
+  methods: ['GET', 'POST', 'PUT'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
