@@ -206,9 +206,7 @@
     // En Vercel con rewrites: window.API_BASE_URL = '' (string vacío → paths relativos)
     // En Vercel sin rewrites: window.API_BASE_URL = 'https://tu-bot.up.railway.app'
     // En dev local sin definir nada: fallback a http://localhost:3000
-    const API_BASE_URL = (typeof window !== 'undefined' && window.API_BASE_URL !== undefined)
-      ? window.API_BASE_URL
-      : 'http://localhost:3000';
+    const API_BASE_URL = 'https://web-production-841c7.up.railway.app';
 
     function authHeaders(extra = {}) {
       return { Authorization: 'Bearer ' + ADMIN_TOKEN, ...extra };
