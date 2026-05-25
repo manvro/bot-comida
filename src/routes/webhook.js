@@ -30,6 +30,10 @@ router.post('/', async (req, res) => {
     const fromRaw = req.body.From || '';
     const toRaw = req.body.To || '';
     const body = req.body.Body || '';
+    const numMedia = parseInt(req.body.NumMedia || '0', 10);
+    if (numMedia > 0 || !body.trim()) {
+      return res.send(twiml('Solo proceso texto. Escribe hola para ver el menú.'));
+    }
 
     const phone = fromRaw.replace(/^whatsapp:/, '').trim();
     const destNumber = toRaw.replace(/^whatsapp:/, '').trim();

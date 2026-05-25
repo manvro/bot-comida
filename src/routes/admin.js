@@ -9,6 +9,7 @@ const {
   getOrdersByDate,
   updateOrderStatus,
 } = require('../db/queries');
+const { sendMessage } = require('../utils/twilioSender');
 const { logHandoff } = require('../utils/handoffLogger');
 
 const DEMO_TENANT_NUMBER = process.env.DEMO_TENANT_NUMBER || '+56900000000';
@@ -69,8 +70,9 @@ adminRouter.post('/resume', (req, res) => {
     updateConversationState(tenant.id, phone, conv.state, ctx);
   }
 
+  sendMessage(phone, 'Hola, ya estoy aquí para ayudarte. ¿En qué te puedo asistir?').catch(err => console.error('[resume] Error enviando mensaje:', err));
   res.json({ ok: true, phone });
-});
+  });
 
 adminRouter.post('/pause', (req, res) => {
   const { phone } = req.body || {};
