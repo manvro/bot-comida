@@ -68,6 +68,25 @@ function getResponse(state, data = {}) {
       );
     }
 
+    case STATES.AWAITING_PAYMENT: {
+      const bank = data.bankInfo || {};
+      const lines = [
+        `Total a transferir: ${formatPrice(data.total || 0)}`,
+        '',
+        '*Datos para la transferencia:*',
+      ];
+      if (bank.bankName)      lines.push(`Banco: ${bank.bankName}`);
+      if (bank.bankType)      lines.push(`Tipo de cuenta: ${bank.bankType}`);
+      if (bank.accountNumber) lines.push(`Número de cuenta: ${bank.accountNumber}`);
+      if (bank.accountHolder) lines.push(`Titular: ${bank.accountHolder}`);
+      if (bank.rut)           lines.push(`RUT: ${bank.rut}`);
+      lines.push('', 'Cuando hayas hecho la transferencia, escribí *transferí* o *listo*.');
+      return lines.join('\n');
+    }
+
+    case STATES.PAYMENT_SENT:
+      return '¡Gracias! Confirmaremos tu pago pronto.';
+
     case STATES.DONE:
       return `¡Listo! Pedido #${data.orderId} registrado. Te avisaremos cuando esté listo. ¡Gracias!`;
 

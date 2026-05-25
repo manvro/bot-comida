@@ -11,10 +11,25 @@ const KEYWORDS = {
   CANCEL:  ['cancelar', 'salir', 'cancelo'],
   CONFIRM: ['confirmar', 'confirmo', 'ok', 'dale', 'listo', 'perfecto'],
   START:   ['hola', 'buenas', 'menu', 'pedir', 'pedido', 'hacer'],
+  PAYMENT_SENT: ['transferi', 'ya pague', 'hice la transferencia', 'pague'],
 };
+
+const REMOVE_PATTERNS = [
+  /^ya no quiero (.+)$/,
+  /^(?:quita|quitame|saca|sacame|elimina|eliminame|quitar|sacar|eliminar)\s+(.+)$/,
+  /^sin (.+)$/,
+];
 
 function hasKeyword(text, keywords) {
   return keywords.some(k => new RegExp(`\\b${k}\\b`).test(text));
+}
+
+function matchRemove(normalized) {
+  for (const re of REMOVE_PATTERNS) {
+    const m = normalized.match(re);
+    if (m && m[1].trim()) return m[1].trim();
+  }
+  return null;
 }
 
 function matchItem(text, lastMenuItems) {
@@ -42,6 +57,11 @@ function parseMessage(text, context = {}) {
 
   if (hasKeyword(normalized, KEYWORDS.HELP)) return { intent: 'HELP' };
   if (hasKeyword(normalized, KEYWORDS.CANCEL) || normalized === 'no') return { intent: 'CANCEL' };
+
+  const removeName = matchRemove(normalized);
+  if (removeName) return { intent: 'REMOVE_ITEM', name: removeName };
+
+  if (hasKeyword(normalized, KEYWORDS.PAYMENT_SENT)) return { intent: 'PAYMENT_SENT' };
   if (hasKeyword(normalized, KEYWORDS.CONFIRM) || normalized === 'si') return { intent: 'CONFIRM' };
   if (hasKeyword(normalized, KEYWORDS.START)) return { intent: 'START' };
 

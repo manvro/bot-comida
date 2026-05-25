@@ -1,11 +1,12 @@
 const { STATES } = require('./states');
-const { parseMessage } = require('./parser');
+const { parseMessage, normalize } = require('./parser');
 const { getResponse } = require('./responses');
 const {
   getOrCreateConversation,
   updateConversationState,
   pauseConversation,
   saveOrder,
+  getTenantById,
 } = require('../db/queries');
 const { getMenuFromCache } = require('../utils/menuLoader');
 const { askClaude } = require('./claudeFallback');
@@ -21,6 +22,28 @@ function addToOrder(currentOrder, item) {
   } else {
     currentOrder.push({ name: item.name, price: item.price, quantity: 1 });
   }
+}
+
+function removeFromOrder(currentOrder, nameText) {
+  const target = normalize(nameText);
+  if (!target) return null;
+  const targetWords = target.split(/[\s\W]+/).filter(w => w.length >= 4);
+
+  for (let i = 0; i < currentOrder.length; i++) {
+    const itemNorm = normalize(currentOrder[i].name);
+    if (itemNorm.includes(target) || target.includes(itemNorm)) {
+      return currentOrder.splice(i, 1)[0];
+    }
+    const itemWords = itemNorm.split(/[\s\W]+/).filter(w => w.length >= 4);
+    if (targetWords.some(tw => itemWords.includes(tw))) {
+      return currentOrder.splice(i, 1)[0];
+    }
+  }
+  return null;
+}
+
+function hasBankInfo(config) {
+  return !!(config && config.bankName && config.accountNumber);
 }
 
 function findItem(lastMenuItems, intent) {
@@ -137,6 +160,23 @@ async function processMessage(tenant_id, phone, incomingText) {
         } else {
           response = 'No encontré ese ítem. Mandá un número del menú.';
         }
+      } else if (intent.intent === 'REMOVE_ITEM') {
+        const removed = removeFromOrder(context.currentOrder, intent.name);
+        if (!removed) {
+          response =
+            'No encontré ese ítem en tu pedido.\n\n' +
+            getResponse(STATES.ORDERING, { order: context.currentOrder });
+        } else if (context.currentOrder.length === 0) {
+          const items = loadMenuIntoContext(tenant_id, context);
+          newState = STATES.MENU;
+          response =
+            `Quité *${removed.name}* del pedido. Tu carrito está vacío.\n\n` +
+            getResponse(STATES.MENU, { items });
+        } else {
+          response =
+            `Quité *${removed.name}* del pedido.\n\n` +
+            getResponse(STATES.ORDERING, { order: context.currentOrder });
+        }
       } else if (intent.intent === 'CONFIRM') {
         newState = STATES.CONFIRM;
         response = getResponse(STATES.CONFIRM, { order: context.currentOrder });
@@ -160,10 +200,18 @@ async function processMessage(tenant_id, phone, incomingText) {
           0,
         );
         const orderId = saveOrder(tenant_id, phone, context.currentOrder, total);
-        response = getResponse(STATES.DONE, { orderId });
-        context.currentOrder = [];
-        context.lastMenuItems = [];
-        newState = STATES.DONE;
+        const tenant = getTenantById(tenant_id);
+        const bankInfo = tenant && tenant.config;
+
+        if (hasBankInfo(bankInfo)) {
+          newState = STATES.AWAITING_PAYMENT;
+          response = getResponse(STATES.AWAITING_PAYMENT, { bankInfo, total });
+        } else {
+          newState = STATES.DONE;
+          response = getResponse(STATES.DONE, { orderId });
+          context.currentOrder = [];
+          context.lastMenuItems = [];
+        }
       } else if (intent.intent === 'CANCEL') {
         newState = STATES.GREETING;
         context.currentOrder = [];
@@ -171,6 +219,24 @@ async function processMessage(tenant_id, phone, incomingText) {
       } else {
         response = 'Necesito que me digas *sí* para confirmar o *no* para cancelar.';
       }
+      break;
+    }
+
+    case STATES.AWAITING_PAYMENT: {
+      if (intent.intent === 'PAYMENT_SENT' || intent.intent === 'CONFIRM') {
+        newState = STATES.PAYMENT_SENT;
+        context.currentOrder = [];
+        context.lastMenuItems = [];
+        response = getResponse(STATES.PAYMENT_SENT);
+      } else {
+        response =
+          'Aún esperamos tu pago. Cuando lo hayas hecho, escribí *transferí* o *listo*.';
+      }
+      break;
+    }
+
+    case STATES.PAYMENT_SENT: {
+      response = 'Tu pago está siendo verificado. Te avisamos pronto.';
       break;
     }
 

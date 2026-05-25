@@ -2,18 +2,26 @@ const express = require('express');
 const db = require('../db/database');
 const {
   getTenantByNumber,
+  updateTenantConfig,
   getPausedConversations,
   resumeConversation,
   pauseConversation,
   updateConversationState,
   getOrdersByDate,
+  getOrderById,
   updateOrderStatus,
 } = require('../db/queries');
 const { sendMessage } = require('../utils/twilioSender');
 const { logHandoff } = require('../utils/handoffLogger');
 
 const DEMO_TENANT_NUMBER = process.env.DEMO_TENANT_NUMBER || '+56900000000';
-const VALID_STATUSES = ['pending', 'confirmed', 'cancelled'];
+const VALID_STATUSES = ['pending', 'confirmed', 'ready', 'cancelled'];
+
+const STATUS_NOTIFICATIONS = {
+  confirmed: '✓ Pago confirmado. Tu pedido está siendo preparado.',
+  ready: '✓ Tu pedido está listo. Puedes retirarlo.',
+  cancelled: 'Tu pedido fue cancelado. Escribe *hola* para hacer uno nuevo.',
+};
 
 function requireAdmin(req, res, next) {
   const expected = process.env.ADMIN_TOKEN;
@@ -86,6 +94,28 @@ adminRouter.post('/pause', (req, res) => {
   res.json({ ok: true, phone });
 });
 
+adminRouter.get('/config', (req, res) => {
+  const tenant = getDemoTenantOr404(res);
+  if (!tenant) return;
+  res.json(tenant.config || {});
+});
+
+adminRouter.put('/config', (req, res) => {
+  const tenant = getDemoTenantOr404(res);
+  if (!tenant) return;
+  const { bankName, accountNumber, accountHolder, rut, bankType } = req.body || {};
+  const newConfig = {
+    ...tenant.config,
+    bankName:      bankName != null ? String(bankName).trim() : '',
+    accountNumber: accountNumber != null ? String(accountNumber).trim() : '',
+    accountHolder: accountHolder != null ? String(accountHolder).trim() : '',
+    rut:           rut != null ? String(rut).trim() : '',
+    bankType:      bankType != null ? String(bankType).trim() : '',
+  };
+  updateTenantConfig(tenant.id, newConfig);
+  res.json({ ok: true, config: newConfig });
+});
+
 const apiRouter = express.Router();
 apiRouter.use(requireAdmin);
 
@@ -113,10 +143,20 @@ apiRouter.put('/orders/:id/status', (req, res) => {
     });
   }
 
-  const changes = updateOrderStatus(tenant.id, orderId, status);
-  if (changes === 0) {
+  const order = getOrderById(tenant.id, orderId);
+  if (!order) {
     return res.status(404).json({ error: 'pedido no encontrado' });
   }
+
+  updateOrderStatus(tenant.id, orderId, status);
+
+  const msg = STATUS_NOTIFICATIONS[status];
+  if (msg && order.phone) {
+    sendMessage(order.phone, msg).catch(err =>
+      console.error('[orders/status] Error notificando al cliente:', err)
+    );
+  }
+
   res.json({ ok: true });
 });
 

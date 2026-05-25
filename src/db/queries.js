@@ -11,6 +11,31 @@ function getTenantByNumber(whatsapp_number) {
   return { ...row, config: JSON.parse(row.config || '{}') };
 }
 
+function getTenantById(tenant_id) {
+  const row = db.prepare(`
+    SELECT id, name, whatsapp_number, config, active, created_at
+    FROM tenants
+    WHERE id = ?
+  `).get(tenant_id);
+
+  if (!row) return null;
+  return { ...row, config: JSON.parse(row.config || '{}') };
+}
+
+function updateTenantConfig(tenant_id, config) {
+  db.prepare(`UPDATE tenants SET config = ? WHERE id = ?`)
+    .run(JSON.stringify(config || {}), tenant_id);
+}
+
+function getOrderById(tenant_id, order_id) {
+  const row = db.prepare(`
+    SELECT id, tenant_id, phone, items, total, status, created_at
+    FROM orders WHERE id = ? AND tenant_id = ?
+  `).get(order_id, tenant_id);
+  if (!row) return null;
+  return { ...row, items: JSON.parse(row.items) };
+}
+
 function saveOrder(tenant_id, phone, items, total) {
   const result = db.prepare(`
     INSERT INTO orders (tenant_id, phone, items, total)
@@ -100,8 +125,11 @@ function getPausedConversations(tenant_id) {
 
 module.exports = {
   getTenantByNumber,
+  getTenantById,
+  updateTenantConfig,
   saveOrder,
   getOrdersByDate,
+  getOrderById,
   updateOrderStatus,
   getOrCreateConversation,
   updateConversationState,

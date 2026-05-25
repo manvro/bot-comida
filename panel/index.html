@@ -156,6 +156,28 @@
       display: none;
     }
     .error-banner.show { display: block; }
+    .config-form { display: grid; gap: 14px; max-width: 480px; }
+    .form-row { display: flex; flex-direction: column; gap: 4px; }
+    .form-row label {
+      font-size: 12px;
+      color: #8fa5cf;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .form-row input {
+      font-family: inherit;
+      font-size: 14px;
+      padding: 8px 10px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: #0f3460;
+      color: #eaeaea;
+    }
+    .form-row input:focus { outline: 2px solid #6c8cd5; outline-offset: 1px; }
+    .config-form button { width: max-content; padding: 8px 16px; }
+    .cfg-status { font-size: 13px; color: #8fa5cf; margin-left: 12px; }
+    .cfg-status.ok { color: #6ee7a7; }
+    .cfg-status.err { color: #ffb3b3; }
     @media (max-width: 600px) {
       main { padding: 14px; }
       table { font-size: 13px; }
@@ -191,6 +213,36 @@
       <div id="menuContainer">
         <p class="empty">Cargando…</p>
       </div>
+    </section>
+
+    <section>
+      <h2>Configuración del local</h2>
+      <form id="configForm" class="config-form">
+        <div class="form-row">
+          <label for="cfgBankName">Banco</label>
+          <input id="cfgBankName" name="bankName" type="text" autocomplete="off" />
+        </div>
+        <div class="form-row">
+          <label for="cfgBankType">Tipo de cuenta</label>
+          <input id="cfgBankType" name="bankType" type="text" autocomplete="off" placeholder="Cuenta corriente, vista, etc." />
+        </div>
+        <div class="form-row">
+          <label for="cfgAccountNumber">Número de cuenta</label>
+          <input id="cfgAccountNumber" name="accountNumber" type="text" autocomplete="off" />
+        </div>
+        <div class="form-row">
+          <label for="cfgAccountHolder">Titular</label>
+          <input id="cfgAccountHolder" name="accountHolder" type="text" autocomplete="off" />
+        </div>
+        <div class="form-row">
+          <label for="cfgRut">RUT</label>
+          <input id="cfgRut" name="rut" type="text" autocomplete="off" />
+        </div>
+        <div>
+          <button type="submit">Guardar</button>
+          <span id="cfgStatus" class="cfg-status"></span>
+        </div>
+      </form>
     </section>
   </main>
 
@@ -263,7 +315,7 @@
         return;
       }
       const rows = orders.map(o => {
-        const opts = ['pending', 'confirmed', 'cancelled']
+        const opts = ['pending', 'confirmed', 'ready', 'cancelled']
           .map(s => `<option value="${s}"${s === o.status ? ' selected' : ''}>${s}</option>`)
           .join('');
         return `
@@ -356,7 +408,42 @@
       }
     }
 
+    async function loadConfig() {
+      try {
+        const cfg = await apiGet('/admin/config');
+        document.getElementById('cfgBankName').value      = cfg.bankName || '';
+        document.getElementById('cfgBankType').value      = cfg.bankType || '';
+        document.getElementById('cfgAccountNumber').value = cfg.accountNumber || '';
+        document.getElementById('cfgAccountHolder').value = cfg.accountHolder || '';
+        document.getElementById('cfgRut').value           = cfg.rut || '';
+      } catch (e) {
+        showError('No pude cargar la configuración: ' + e.message);
+      }
+    }
+
+    document.getElementById('configForm').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const statusEl = document.getElementById('cfgStatus');
+      statusEl.textContent = 'Guardando…';
+      statusEl.className = 'cfg-status';
+      try {
+        await apiSend('/admin/config', 'PUT', {
+          bankName:      document.getElementById('cfgBankName').value,
+          bankType:      document.getElementById('cfgBankType').value,
+          accountNumber: document.getElementById('cfgAccountNumber').value,
+          accountHolder: document.getElementById('cfgAccountHolder').value,
+          rut:           document.getElementById('cfgRut').value,
+        });
+        statusEl.textContent = '✓ Guardado';
+        statusEl.className = 'cfg-status ok';
+      } catch (e) {
+        statusEl.textContent = 'Error: ' + e.message;
+        statusEl.className = 'cfg-status err';
+      }
+    });
+
     refreshAll();
+    loadConfig();
     setInterval(refreshAll, REFRESH_MS);
   </script>
 </body>
