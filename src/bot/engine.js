@@ -236,7 +236,15 @@ async function processMessage(tenant_id, phone, incomingText) {
     }
 
     case STATES.PAYMENT_SENT: {
-      response = 'Tu pago está siendo verificado. Te avisamos pronto.';
+      if (intent.intent === 'START') {
+        const items = loadMenuIntoContext(tenant_id, context);
+        context.currentOrder = [];
+        newState = STATES.MENU;
+        response =
+          getResponse(STATES.GREETING) + '\n\n' + getResponse(STATES.MENU, { items });
+      } else {
+        response = 'Tu pago está siendo verificado. Te avisamos pronto.';
+      }
       break;
     }
 

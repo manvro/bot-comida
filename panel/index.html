@@ -315,8 +315,14 @@
         return;
       }
       const rows = orders.map(o => {
+        const STATUS_LABELS = {
+          pending:   'Pendiente',
+          confirmed: 'Pago confirmado',
+          ready:     'Listo para retirar',
+          cancelled: 'Cancelado',
+        };
         const opts = ['pending', 'confirmed', 'ready', 'cancelled']
-          .map(s => `<option value="${s}"${s === o.status ? ' selected' : ''}>${s}</option>`)
+          .map(s => `<option value="${s}"${s === o.status ? ' selected' : ''}>${STATUS_LABELS[s]}</option>`)
           .join('');
         return `
           <tr class="status-${escapeHtml(o.status)}">

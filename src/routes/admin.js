@@ -23,6 +23,8 @@ const STATUS_NOTIFICATIONS = {
   cancelled: 'Tu pedido fue cancelado. Escribe *hola* para hacer uno nuevo.',
 };
 
+const STATUSES_RESET_CONVERSATION = ['confirmed', 'ready', 'cancelled'];
+
 function requireAdmin(req, res, next) {
   const expected = process.env.ADMIN_TOKEN;
   const auth = req.headers.authorization || '';
@@ -149,6 +151,14 @@ apiRouter.put('/orders/:id/status', (req, res) => {
   }
 
   updateOrderStatus(tenant.id, orderId, status);
+
+  if (STATUSES_RESET_CONVERSATION.includes(status) && order.phone) {
+    updateConversationState(tenant.id, order.phone, 'GREETING', {
+      currentOrder: [],
+      lastMenuItems: [],
+      unknownCount: 0,
+    });
+  }
 
   const msg = STATUS_NOTIFICATIONS[status];
   if (msg && order.phone) {
