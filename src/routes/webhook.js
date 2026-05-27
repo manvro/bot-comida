@@ -51,6 +51,7 @@ router.post('/', async (req, res) => {
     }
 
     const responseText = await processMessage(tenant.id, phone, body);
+    console.log(`[webhook] response para ${phone}: ${JSON.stringify(responseText?.slice(0, 60))}`);
     if (responseText == null) {
       return res.send(
         twiml('Lo siento, no pude procesar tu mensaje. Escribí *hola* para empezar.'),
