@@ -15,12 +15,12 @@ const { logHandoff } = require('../utils/handoffLogger');
 
 const UNKNOWN_HANDOFF_THRESHOLD = 3;
 
-function addToOrder(currentOrder, item) {
+function addToOrder(currentOrder, item, quantity = 1) {
   const existing = currentOrder.find(o => o.name === item.name);
   if (existing) {
-    existing.quantity += 1;
+    existing.quantity += quantity;
   } else {
-    currentOrder.push({ name: item.name, price: item.price, quantity: 1 });
+    currentOrder.push({ name: item.name, price: item.price, quantity });
   }
 }
 
@@ -126,7 +126,7 @@ async function processMessage(tenant_id, phone, incomingText) {
       if (intent.intent === 'SELECT_ITEM') {
         const item = findItem(context.lastMenuItems, intent);
         if (item) {
-          addToOrder(context.currentOrder, item);
+          addToOrder(context.currentOrder, item, intent.quantity || 1);
           newState = STATES.ORDERING;
           response = getResponse(STATES.ORDERING, {
             lastItem: item,
@@ -152,7 +152,7 @@ async function processMessage(tenant_id, phone, incomingText) {
       if (intent.intent === 'SELECT_ITEM') {
         const item = findItem(context.lastMenuItems, intent);
         if (item) {
-          addToOrder(context.currentOrder, item);
+          addToOrder(context.currentOrder, item, intent.quantity || 1);
           response = getResponse(STATES.ORDERING, {
             lastItem: item,
             order: context.currentOrder,

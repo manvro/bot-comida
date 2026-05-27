@@ -55,6 +55,13 @@ function parseMessage(text, context = {}) {
     return { intent: 'SELECT_ITEM', index: parseInt(numMatch[1], 10) };
   }
 
+  const qtyNameMatch = normalized.match(/^(\d+)\s+(.+)$/);
+  if (qtyNameMatch) {
+    const qty = Math.min(parseInt(qtyNameMatch[1], 10), 20);
+    const itemName = matchItem(qtyNameMatch[2], context.lastMenuItems);
+    if (itemName) return { intent: 'SELECT_ITEM', name: itemName, quantity: qty };
+  }
+
   if (hasKeyword(normalized, KEYWORDS.HELP)) return { intent: 'HELP' };
   if (hasKeyword(normalized, KEYWORDS.CANCEL) || normalized === 'no') return { intent: 'CANCEL' };
 
