@@ -6,6 +6,7 @@ const { getTenantByNumber } = require('./src/db/queries');
 const { loadMenu, getMenuFromCache } = require('./src/utils/menuLoader');
 const { adminRouter, apiRouter } = require('./src/routes/admin');
 const webhookRouter = require('./src/routes/webhook');
+const authRouter = require('./src/routes/auth');
 
 const DEMO_TENANT_NUMBER = process.env.DEMO_TENANT_NUMBER || '+56900000000';
 
@@ -32,6 +33,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/admin', adminRouter);
 app.use('/api', apiRouter);
 app.use('/webhook', webhookRouter);
+app.use('/auth', authRouter);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Bot de comida activo' });

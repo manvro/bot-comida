@@ -123,6 +123,22 @@ function getPausedConversations(tenant_id) {
   return rows.map(r => ({ ...r, context: JSON.parse(r.context || '{}') }));
 }
 
+function getUserByEmail(email) {
+  return db.prepare(`
+    SELECT id, tenant_id, email, password_hash
+    FROM users
+    WHERE email = ?
+  `).get(email);
+}
+
+function createUser(tenant_id, email, password_hash) {
+  const result = db.prepare(`
+    INSERT INTO users (tenant_id, email, password_hash)
+    VALUES (?, ?, ?)
+  `).run(tenant_id, email, password_hash);
+  return result.lastInsertRowid;
+}
+
 module.exports = {
   getTenantByNumber,
   getTenantById,
@@ -136,4 +152,6 @@ module.exports = {
   pauseConversation,
   resumeConversation,
   getPausedConversations,
+  getUserByEmail,
+  createUser,
 };

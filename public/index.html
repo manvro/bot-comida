@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Panel de Control — Bot Comida</title>
+
   <style>
     * { box-sizing: border-box; }
     body {
@@ -168,6 +169,43 @@
     .cfg-status { font-size: 13px; color: #8fa5cf; margin-left: 12px; }
     .cfg-status.ok { color: #6ee7a7; }
     .cfg-status.err { color: #ffb3b3; }
+    #loginScreen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .login-box {
+      background: #16213e;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      padding: 32px;
+      width: 100%;
+      max-width: 360px;
+    }
+    .login-box h2 {
+      margin: 0 0 24px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #eaeaea;
+    }
+    .login-box .form-row {
+      margin-bottom: 16px;
+    }
+    .login-error {
+      color: #ffb3b3;
+      font-size: 13px;
+      margin-top: 12px;
+      min-height: 18px;
+    }
+    .logout-btn {
+      font-size: 12px;
+      padding: 4px 10px;
+      opacity: 0.7;
+    }
+    .logout-btn:hover { opacity: 1; }
     @media (max-width: 600px) {
       main { padding: 14px; }
       table { font-size: 13px; }
@@ -177,90 +215,177 @@
   </style>
 </head>
 <body>
-  <header>
-    <h1>Panel de Control — Bot Comida</h1>
-  </header>
 
-  <div class="error-banner" id="errorBanner"></div>
-
-  <main>
-    <section>
-      <h2>Pedidos de hoy</h2>
-      <div id="ordersContainer">
-        <p class="empty">Cargando…</p>
+  <!-- PANTALLA DE LOGIN -->
+  <div id="loginScreen" style="display:none">
+    <div class="login-box">
+      <h2>Panel de Control</h2>
+      <div class="form-row">
+        <label for="loginEmail">Email</label>
+        <input id="loginEmail" type="email" autocomplete="email" placeholder="admin@demo.cl" />
       </div>
-    </section>
-
-    <section>
-      <h2>Conversaciones pausadas (esperando humano)</h2>
-      <div id="pausedContainer">
-        <p class="empty">Cargando…</p>
+      <div class="form-row">
+        <label for="loginPassword">Contraseña</label>
+        <input id="loginPassword" type="password" autocomplete="current-password" />
       </div>
-    </section>
+      <button onclick="doLogin()" style="width:100%;padding:10px;">Entrar</button>
+      <div class="login-error" id="loginError"></div>
+    </div>
+  </div>
 
-    <section>
-      <h2>Menú activo hoy</h2>
-      <div id="menuContainer">
-        <p class="empty">Cargando…</p>
+  <!-- PANTALLA PRINCIPAL -->
+  <div id="appScreen" style="display:none">
+    <header>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h1>Panel de Control — Bot Comida</h1>
+        <button class="logout-btn" onclick="doLogout()">Cerrar sesión</button>
       </div>
-    </section>
+    </header>
 
-    <section>
-      <h2>Configuración del local</h2>
-      <form id="configForm" class="config-form">
-        <div class="form-row">
-          <label for="cfgBankName">Banco</label>
-          <input id="cfgBankName" name="bankName" type="text" autocomplete="off" />
-        </div>
-        <div class="form-row">
-          <label for="cfgBankType">Tipo de cuenta</label>
-          <input id="cfgBankType" name="bankType" type="text" autocomplete="off" placeholder="Cuenta corriente, vista, etc." />
-        </div>
-        <div class="form-row">
-          <label for="cfgAccountNumber">Número de cuenta</label>
-          <input id="cfgAccountNumber" name="accountNumber" type="text" autocomplete="off" />
-        </div>
-        <div class="form-row">
-          <label for="cfgAccountHolder">Titular</label>
-          <input id="cfgAccountHolder" name="accountHolder" type="text" autocomplete="off" />
-        </div>
-        <div class="form-row">
-          <label for="cfgRut">RUT</label>
-          <input id="cfgRut" name="rut" type="text" autocomplete="off" />
-        </div>
-        <div>
-          <button type="submit">Guardar</button>
-          <span id="cfgStatus" class="cfg-status"></span>
-        </div>
-      </form>
-    </section>
-  </main>
+    <div class="error-banner" id="errorBanner"></div>
 
-  <footer>
-    <span>Última actualización: <span id="updatedAt">—</span></span>
-    <button onclick="refreshAll()">Actualizar ahora</button>
-  </footer>
+    <main>
+      <section>
+        <h2>Pedidos de hoy</h2>
+        <div id="ordersContainer">
+          <p class="empty">Cargando…</p>
+        </div>
+      </section>
+
+      <section>
+        <h2>Conversaciones pausadas (esperando humano)</h2>
+        <div id="pausedContainer">
+          <p class="empty">Cargando…</p>
+        </div>
+      </section>
+
+      <section>
+        <h2>Menú activo hoy</h2>
+        <div id="menuContainer">
+          <p class="empty">Cargando…</p>
+        </div>
+      </section>
+
+      <section>
+        <h2>Configuración del local</h2>
+        <form id="configForm" class="config-form">
+          <div class="form-row">
+            <label for="cfgBankName">Banco</label>
+            <input id="cfgBankName" name="bankName" type="text" autocomplete="off" />
+          </div>
+          <div class="form-row">
+            <label for="cfgBankType">Tipo de cuenta</label>
+            <input id="cfgBankType" name="bankType" type="text" autocomplete="off" placeholder="Cuenta corriente, vista, etc." />
+          </div>
+          <div class="form-row">
+            <label for="cfgAccountNumber">Número de cuenta</label>
+            <input id="cfgAccountNumber" name="accountNumber" type="text" autocomplete="off" />
+          </div>
+          <div class="form-row">
+            <label for="cfgAccountHolder">Titular</label>
+            <input id="cfgAccountHolder" name="accountHolder" type="text" autocomplete="off" />
+          </div>
+          <div class="form-row">
+            <label for="cfgRut">RUT</label>
+            <input id="cfgRut" name="rut" type="text" autocomplete="off" />
+          </div>
+          <div>
+            <button type="submit">Guardar</button>
+            <span id="cfgStatus" class="cfg-status"></span>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <footer>
+      <span>Última actualización: <span id="updatedAt">—</span></span>
+      <button onclick="refreshAll()">Actualizar ahora</button>
+    </footer>
+  </div>
 
   <script>
-    const ADMIN_TOKEN = 'admin123';
+    const API_BASE_URL = window.API_BASE_URL || 'http://localhost:3000';
     const REFRESH_MS = 20000;
+    let AUTH_TOKEN = null;
+
+    function getToken() {
+      return AUTH_TOKEN || sessionStorage.getItem('auth_token');
+    }
+
+    function saveToken(token) {
+      AUTH_TOKEN = token;
+      sessionStorage.setItem('auth_token', token);
+    }
+
+    function clearToken() {
+      AUTH_TOKEN = null;
+      sessionStorage.removeItem('auth_token');
+    }
 
     function authHeaders(extra = {}) {
-      return { Authorization: 'Bearer ' + ADMIN_TOKEN, ...extra };
+      return { Authorization: 'Bearer ' + getToken(), ...extra };
+    }
+
+    function showLogin() {
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('appScreen').style.display = 'none';
+    }
+
+    function showApp() {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('appScreen').style.display = 'block';
+      refreshAll();
+      loadConfig();
+    }
+
+    function doLogout() {
+      clearToken();
+      showLogin();
+    }
+
+    async function doLogin() {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const errorEl = document.getElementById('loginError');
+      errorEl.textContent = '';
+
+      if (!email || !password) {
+        errorEl.textContent = 'Ingresa email y contraseña';
+        return;
+      }
+
+      try {
+        const r = await fetch(API_BASE_URL + '/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await r.json();
+        if (!r.ok) {
+          errorEl.textContent = data.error || 'Error al iniciar sesión';
+          return;
+        }
+        saveToken(data.token);
+        showApp();
+      } catch (e) {
+        errorEl.textContent = 'No se pudo conectar al servidor';
+      }
     }
 
     async function apiGet(path) {
-      const r = await fetch(path, { headers: authHeaders() });
+      const r = await fetch(API_BASE_URL + path, { headers: authHeaders() });
+      if (r.status === 401) { doLogout(); return; }
       if (!r.ok) throw new Error(path + ' -> HTTP ' + r.status);
       return r.json();
     }
 
     async function apiSend(path, method, body) {
-      const r = await fetch(path, {
+      const r = await fetch(API_BASE_URL + path, {
         method,
         headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(body),
       });
+      if (r.status === 401) { doLogout(); return; }
       if (!r.ok) throw new Error(path + ' -> HTTP ' + r.status);
       return r.json();
     }
@@ -287,6 +412,7 @@
       el.textContent = msg;
       el.classList.add('show');
     }
+
     function clearError() {
       const el = document.getElementById('errorBanner');
       el.textContent = '';
@@ -299,9 +425,15 @@
         c.innerHTML = '<p class="empty">No hay pedidos hoy.</p>';
         return;
       }
+      const STATUS_LABELS = {
+        pending:   'Pendiente',
+        confirmed: 'Pago confirmado',
+        ready:     'Listo para retirar',
+        cancelled: 'Cancelado',
+      };
       const rows = orders.map(o => {
         const opts = ['pending', 'confirmed', 'ready', 'cancelled']
-          .map(s => `<option value="${s}"${s === o.status ? ' selected' : ''}>${s}</option>`)
+          .map(s => `<option value="${s}"${s === o.status ? ' selected' : ''}>${STATUS_LABELS[s]}</option>`)
           .join('');
         return `
           <tr class="status-${escapeHtml(o.status)}">
@@ -381,7 +513,7 @@
         const [orders, paused, menu] = await Promise.all([
           apiGet('/api/orders'),
           apiGet('/admin/paused'),
-          fetch('/menu').then(r => r.json()),
+          fetch(API_BASE_URL + '/menu').then(r => r.json()),
         ]);
         renderOrders(orders);
         renderPaused(paused);
@@ -396,6 +528,7 @@
     async function loadConfig() {
       try {
         const cfg = await apiGet('/admin/config');
+        if (!cfg) return;
         document.getElementById('cfgBankName').value      = cfg.bankName || '';
         document.getElementById('cfgBankType').value      = cfg.bankType || '';
         document.getElementById('cfgAccountNumber').value = cfg.accountNumber || '';
@@ -427,9 +560,20 @@
       }
     });
 
-    refreshAll();
-    loadConfig();
-    setInterval(refreshAll, REFRESH_MS);
+    // Inicialización
+    const tok = getToken();
+    console.log('Token al iniciar:', tok);
+    if (tok) {
+      showApp();
+    } else {
+      showLogin();
+    }
+
+    setInterval(() => { if (getToken()) refreshAll(); }, REFRESH_MS);
+
+    document.getElementById('loginPassword').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doLogin();
+    });
   </script>
 </body>
 </html>

@@ -1,7 +1,6 @@
 const express = require('express');
 const db = require('../db/database');
 const {
-  getTenantByNumber,
   updateTenantConfig,
   getPausedConversations,
   resumeConversation,
@@ -10,11 +9,12 @@ const {
   getOrdersByDate,
   getOrderById,
   updateOrderStatus,
+  getTenantById,
 } = require('../db/queries');
 const { sendMessage } = require('../utils/twilioSender');
 const { logHandoff } = require('../utils/handoffLogger');
+const { requireAuth } = require('../middleware/auth');
 
-const DEMO_TENANT_NUMBER = process.env.DEMO_TENANT_NUMBER || '+56900000000';
 const VALID_STATUSES = ['pending', 'confirmed', 'ready', 'cancelled'];
 
 const STATUS_NOTIFICATIONS = {
@@ -25,33 +25,20 @@ const STATUS_NOTIFICATIONS = {
 
 const STATUSES_RESET_CONVERSATION = ['confirmed', 'ready', 'cancelled'];
 
-function requireAdmin(req, res, next) {
-  const expected = process.env.ADMIN_TOKEN;
-  const auth = req.headers.authorization || '';
-  if (!expected || !auth.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'No autorizado' });
-  }
-  const token = auth.slice('Bearer '.length).trim();
-  if (token !== expected) {
-    return res.status(401).json({ error: 'No autorizado' });
-  }
-  next();
-}
-
-function getDemoTenantOr404(res) {
-  const tenant = getTenantByNumber(DEMO_TENANT_NUMBER);
+function getTenantOr404(res, tenantId) {
+  const tenant = getTenantById(tenantId);
   if (!tenant) {
-    res.status(404).json({ error: 'Tenant demo no encontrado' });
+    res.status(404).json({ error: 'Tenant no encontrado' });
     return null;
   }
   return tenant;
 }
 
 const adminRouter = express.Router();
-adminRouter.use(requireAdmin);
+adminRouter.use(requireAuth);
 
 adminRouter.get('/paused', (req, res) => {
-  const tenant = getDemoTenantOr404(res);
+  const tenant = getTenantOr404(res, req.user.tenantId);
   if (!tenant) return;
   const rows = getPausedConversations(tenant.id);
   const data = rows.map((r) => ({
@@ -66,7 +53,7 @@ adminRouter.get('/paused', (req, res) => {
 adminRouter.post('/resume', (req, res) => {
   const { phone } = req.body || {};
   if (!phone) return res.status(400).json({ error: 'phone requerido' });
-  const tenant = getDemoTenantOr404(res);
+  const tenant = getTenantOr404(res, req.user.tenantId);
   if (!tenant) return;
 
   resumeConversation(tenant.id, phone);
@@ -82,12 +69,12 @@ adminRouter.post('/resume', (req, res) => {
 
   sendMessage(phone, 'Hola, ya estoy aquí para ayudarte. ¿En qué te puedo asistir?').catch(err => console.error('[resume] Error enviando mensaje:', err));
   res.json({ ok: true, phone });
-  });
+});
 
 adminRouter.post('/pause', (req, res) => {
   const { phone } = req.body || {};
   if (!phone) return res.status(400).json({ error: 'phone requerido' });
-  const tenant = getDemoTenantOr404(res);
+  const tenant = getTenantOr404(res, req.user.tenantId);
   if (!tenant) return;
 
   pauseConversation(tenant.id, phone);
@@ -97,13 +84,13 @@ adminRouter.post('/pause', (req, res) => {
 });
 
 adminRouter.get('/config', (req, res) => {
-  const tenant = getDemoTenantOr404(res);
+  const tenant = getTenantOr404(res, req.user.tenantId);
   if (!tenant) return;
   res.json(tenant.config || {});
 });
 
 adminRouter.put('/config', (req, res) => {
-  const tenant = getDemoTenantOr404(res);
+  const tenant = getTenantOr404(res, req.user.tenantId);
   if (!tenant) return;
   const { bankName, accountNumber, accountHolder, rut, bankType } = req.body || {};
   const newConfig = {
@@ -119,10 +106,10 @@ adminRouter.put('/config', (req, res) => {
 });
 
 const apiRouter = express.Router();
-apiRouter.use(requireAdmin);
+apiRouter.use(requireAuth);
 
 apiRouter.get('/orders', (req, res) => {
-  const tenant = getDemoTenantOr404(res);
+  const tenant = getTenantOr404(res, req.user.tenantId);
   if (!tenant) return;
   const date = req.query.date || new Date().toISOString().slice(0, 10);
   const orders = getOrdersByDate(tenant.id, date);
@@ -130,7 +117,7 @@ apiRouter.get('/orders', (req, res) => {
 });
 
 apiRouter.put('/orders/:id/status', (req, res) => {
-  const tenant = getDemoTenantOr404(res);
+  const tenant = getTenantOr404(res, req.user.tenantId);
   if (!tenant) return;
 
   const orderId = parseInt(req.params.id, 10);

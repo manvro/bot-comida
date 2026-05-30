@@ -51,6 +51,15 @@ db.exec(`
     loaded_at  TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (tenant_id) REFERENCES tenants(id)
   );
+
+  CREATE TABLE IF NOT EXISTS users (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_id     INTEGER NOT NULL,
+    email         TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+  );
 `);
 
 const tenantCount = db.prepare('SELECT COUNT(*) AS n FROM tenants').get().n;
