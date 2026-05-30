@@ -261,6 +261,11 @@
 
       <section>
         <h2>Menú activo hoy</h2>
+        <div style="margin-bottom:12px;display:flex;gap:12px;align-items:center;">
+          <button onclick="reloadMenu()">↺ Recargar desde Excel</button>
+          <button onclick="toggleMenuEdit()" id="editMenuBtn">✎ Editar precios</button>
+          <span id="menuReloadStatus" class="cfg-status"></span>
+        </div>
         <div id="menuContainer">
           <p class="empty">Cargando…</p>
         </div>
@@ -505,6 +510,102 @@
         refreshAll();
       } catch (e) {
         showError('No pude reanudar ' + phone + ': ' + e.message);
+      }
+    }
+
+    async function reloadMenu() {
+      const statusEl = document.getElementById('menuReloadStatus');
+      statusEl.textContent = 'Recargando…';
+      statusEl.className = 'cfg-status';
+      try {
+        const data = await apiSend('/admin/menu/reload', 'POST', {});
+        statusEl.textContent = `✓ ${data.items} ítems cargados`;
+        statusEl.className = 'cfg-status ok';
+        refreshAll();
+      } catch (e) {
+        statusEl.textContent = 'Error: ' + e.message;
+        statusEl.className = 'cfg-status err';
+      }
+    }
+
+    let menuEditMode = false;
+    let menuItemsCache = [];
+
+    function toggleMenuEdit() {
+      menuEditMode = !menuEditMode;
+      document.getElementById('editMenuBtn').textContent = menuEditMode ? '✓ Guardar cambios' : '✎ Editar precios';
+      if (menuEditMode) {
+        loadMenuEditor();
+      } else {
+        saveMenuChanges();
+      }
+    }
+
+    async function loadMenuEditor() {
+      try {
+        const items = await apiGet('/admin/menu/items');
+        menuItemsCache = items;
+        const c = document.getElementById('menuContainer');
+        if (!items || items.length === 0) {
+          c.innerHTML = '<p class="empty">No hay ítems.</p>';
+          return;
+        }
+        const rows = items.map(i => `
+          <tr>
+            <td>${escapeHtml(i.category || '—')}</td>
+            <td>${escapeHtml(i.name)}</td>
+            <td><input type="number" data-id="${i.id}" data-field="price" value="${i.price}" min="0" step="1" style="width:90px;background:#0a2240;color:#eaeaea;border:1px solid rgba(255,255,255,0.2);border-radius:4px;padding:4px 6px;" /></td>
+            <td>
+              <select data-id="${i.id}" data-field="available" style="background:#0a2240;color:#eaeaea;border:1px solid rgba(255,255,255,0.2);border-radius:4px;padding:4px 6px;">
+                <option value="1" ${i.available ? 'selected' : ''}>Disponible</option>
+                <option value="0" ${!i.available ? 'selected' : ''}>No disponible</option>
+              </select>
+            </td>
+          </tr>
+        `).join('');
+        c.innerHTML = `
+          <table>
+            <thead>
+              <tr><th>Categoría</th><th>Nombre</th><th>Precio</th><th>Estado</th></tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `;
+      } catch (e) {
+        showError('Error cargando editor: ' + e.message);
+      }
+    }
+
+    async function saveMenuChanges() {
+      const inputs = document.querySelectorAll('#menuContainer [data-id][data-field="price"]');
+      const selects = document.querySelectorAll('#menuContainer [data-id][data-field="available"]');
+
+      const changes = {};
+      inputs.forEach(el => {
+        changes[el.dataset.id] = { price: Number(el.value) };
+      });
+      selects.forEach(el => {
+        if (changes[el.dataset.id]) {
+          changes[el.dataset.id].available = el.value === '1';
+        }
+      });
+
+      const statusEl = document.getElementById('menuReloadStatus');
+      statusEl.textContent = 'Guardando…';
+      statusEl.className = 'cfg-status';
+
+      try {
+        await Promise.all(
+          Object.entries(changes).map(([id, data]) =>
+            apiSend(`/admin/menu/items/${id}`, 'PUT', data)
+          )
+        );
+        statusEl.textContent = '✓ Cambios guardados';
+        statusEl.className = 'cfg-status ok';
+        refreshAll();
+      } catch (e) {
+        statusEl.textContent = 'Error: ' + e.message;
+        statusEl.className = 'cfg-status err';
       }
     }
 

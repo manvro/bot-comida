@@ -10,10 +10,13 @@ const {
   getOrderById,
   updateOrderStatus,
   getTenantById,
+  updateMenuItem,
+  getMenuItems,
 } = require('../db/queries');
 const { sendMessage } = require('../utils/twilioSender');
 const { logHandoff } = require('../utils/handoffLogger');
 const { requireAuth } = require('../middleware/auth');
+const { loadMenu } = require('../utils/menuLoader');
 
 const VALID_STATUSES = ['pending', 'confirmed', 'ready', 'cancelled'];
 
@@ -81,6 +84,53 @@ adminRouter.post('/pause', (req, res) => {
   logHandoff(tenant.id, phone, 'pausa_manual');
 
   res.json({ ok: true, phone });
+});
+
+adminRouter.post('/menu/reload', (req, res) => {
+  const tenant = getTenantOr404(res, req.user.tenantId);
+  if (!tenant) return;
+
+  try {
+    const count = loadMenu(tenant.id);
+    res.json({ ok: true, items: count });
+  } catch (err) {
+    console.error('[menu/reload] Error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+adminRouter.get('/menu/items', (req, res) => {
+  const tenant = getTenantOr404(res, req.user.tenantId);
+  if (!tenant) return;
+  const items = getMenuItems(tenant.id);
+  res.json(items);
+});
+
+adminRouter.put('/menu/items/:id', (req, res) => {
+  const tenant = getTenantOr404(res, req.user.tenantId);
+  if (!tenant) return;
+
+  const itemId = parseInt(req.params.id, 10);
+  if (!Number.isInteger(itemId) || itemId <= 0) {
+    return res.status(400).json({ error: 'id inválido' });
+  }
+
+  const { price, available } = req.body || {};
+  if (price == null || available == null) {
+    return res.status(400).json({ error: 'price y available son requeridos' });
+  }
+
+  const parsedPrice = Number(price);
+  if (Number.isNaN(parsedPrice) || parsedPrice < 0) {
+    return res.status(400).json({ error: 'price inválido' });
+  }
+
+  const changes = updateMenuItem(tenant.id, itemId, parsedPrice, available);
+  if (!changes) {
+    return res.status(404).json({ error: 'ítem no encontrado' });
+  }
+
+  res.json({ ok: true });
 });
 
 adminRouter.get('/config', (req, res) => {

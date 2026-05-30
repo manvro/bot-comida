@@ -139,6 +139,24 @@ function createUser(tenant_id, email, password_hash) {
   return result.lastInsertRowid;
 }
 
+function updateMenuItem(tenant_id, item_id, price, available) {
+  const result = db.prepare(`
+    UPDATE menu_cache
+    SET price = ?, available = ?
+    WHERE id = ? AND tenant_id = ?
+  `).run(price, available ? 1 : 0, item_id, tenant_id);
+  return result.changes;
+}
+
+function getMenuItems(tenant_id) {
+  return db.prepare(`
+    SELECT id, name, price, category, available
+    FROM menu_cache
+    WHERE tenant_id = ?
+    ORDER BY category ASC, name ASC
+  `).all(tenant_id);
+}
+
 module.exports = {
   getTenantByNumber,
   getTenantById,
@@ -154,4 +172,6 @@ module.exports = {
   getPausedConversations,
   getUserByEmail,
   createUser,
+  updateMenuItem,
+  getMenuItems,
 };
