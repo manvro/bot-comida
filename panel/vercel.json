@@ -1,7 +1,8 @@
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://REEMPLAZAR-URL-DEL-BOT.up.railway.app/api/$1" },
-    { "source": "/admin/(.*)", "destination": "https://REEMPLAZAR-URL-DEL-BOT.up.railway.app/admin/$1" },
-    { "source": "/menu", "destination": "https://REEMPLAZAR-URL-DEL-BOT.up.railway.app/menu" }
+    { "source": "/api/(.*)", "destination": "https://web-production-841c7.up.railway.app/api/$1" },
+    { "source": "/admin/(.*)", "destination": "https://web-production-841c7.up.railway.app/admin/$1" },
+    { "source": "/auth/(.*)", "destination": "https://web-production-841c7.up.railway.app/auth/$1" },
+    { "source": "/menu", "destination": "https://web-production-841c7.up.railway.app/menu" }
   ]
 }
