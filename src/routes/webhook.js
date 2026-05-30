@@ -1,6 +1,9 @@
 const express = require('express');
 const { getTenantByNumber } = require('../db/queries');
 const { processMessage } = require('../bot/engine');
+// Agregar estas dos líneas aquí:
+const twilio = require('twilio');
+const WEBHOOK_URL = process.env.WEBHOOK_URL || '';
 
 const router = express.Router();
 
@@ -23,7 +26,31 @@ function twiml(text) {
   );
 }
 
-router.post('/', async (req, res) => {
+function validateTwilioSignature(req, res, next) {
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+
+  if (!authToken) {
+    console.warn('[webhook] TWILIO_AUTH_TOKEN no configurado, saltando validación');
+    return next();
+  }
+
+  if (!WEBHOOK_URL) {
+    console.warn('[webhook] WEBHOOK_URL no configurado, saltando validación');
+    return next();
+  }
+
+  const signature = req.headers['x-twilio-signature'] || '';
+  const valid = twilio.validateRequest(authToken, signature, WEBHOOK_URL, req.body);
+
+  if (!valid) {
+    console.warn('[webhook] Firma inválida — request rechazado');
+    return res.status(403).send(twiml(null));
+  }
+
+  next();
+}
+
+router.post('/', validateTwilioSignature, async (req, res) => {
   res.set('Content-Type', 'text/xml');
 
   try {
