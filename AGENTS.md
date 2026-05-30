@@ -23,6 +23,7 @@ npm run dev          # desarrollo con nodemon (server.js)
 npm start            # producción (node server.js)
 node src/db/test-db.js              # script manual de prueba de DB
 node src/bot/test-conversation.js   # script manual de prueba del motor
+node src/db/create-user.js <email> <pass> [tenant_id=1]   # alta de usuario del panel
 ```
 No hay test runner (Jest/Vitest) ni linter configurado. Las "pruebas" son scripts manuales.
 
@@ -51,6 +52,22 @@ WhatsApp del cliente
 Mensajes salientes **fuera del webhook** (notificaciones, reanudar) se mandan con
 `src/utils/twilioSender.js` (`sendMessage`) — p. ej. al cambiar status de un pedido o al
 reanudar una conversación desde el panel.
+
+### Autenticación del panel (login real)
+
+El panel usa **login con usuario/contraseña + JWT** (ya no el viejo `ADMIN_TOKEN`):
+
+```
+Panel → POST /auth/login {email, password}   (src/routes/auth.js)
+   · rate-limit: 5 intentos / 15 min por email (en memoria); compare anti-timing
+   · bcrypt.compare contra users.password_hash
+   · signToken({userId, tenantId, email}) → JWT (expira 8h)   (src/middleware/auth.js)
+Panel guarda el token y lo manda como `Authorization: Bearer <jwt>` en cada request.
+/admin/* y /api/* → requireAuth verifica el JWT y setea req.user.
+   · cada endpoint opera sobre req.user.tenantId → cada usuario ve SOLO su tenant.
+```
+
+Alta de usuarios: `node src/db/create-user.js <email> <pass> [tenant_id]` (hashea con bcrypt).
 
 ## Máquina de estados (src/bot/states.js)
 
@@ -88,13 +105,20 @@ bot-comida/
 │   │   │                      las 4 tablas, seed del tenant demo. DB_PATH ← env var.
 │   │   ├── queries.js         TODAS las queries (prepared statements). Única capa que
 │   │   │                      toca SQL — si migrás a Postgres, es el archivo a reescribir.
+│   │   ├── create-user.js     CLI para crear usuarios del panel (bcrypt).
 │   │   └── test-db.js         script manual de prueba de DB.
 │   │
 │   ├── routes/                ── HTTP ──
 │   │   ├── webhook.js         POST /webhook (Twilio). Parsea, llama al motor, responde TwiML.
-│   │   └── admin.js           adminRouter (/admin/*) + apiRouter (/api/*). Auth Bearer token.
-│   │                          Endpoints del panel: pedidos, pausadas, resume/pause, config,
-│   │                          cambiar status de pedido (notifica al cliente por WhatsApp).
+│   │   ├── admin.js           adminRouter (/admin/*) + apiRouter (/api/*). Protegidos por
+│   │   │                      requireAuth (JWT), scopeados por req.user.tenantId. Endpoints
+│   │   │                      del panel: pedidos, pausadas, resume/pause, config, cambiar
+│   │   │                      status de pedido (notifica al cliente por WhatsApp).
+│   │   └── auth.js            POST /auth/login. bcrypt + rate-limit, emite JWT.
+│   │
+│   ├── middleware/
+│   │   └── auth.js            signToken() + requireAuth(). JWT (jsonwebtoken), expira 8h.
+│   │                          Lee JWT_SECRET de env (fallback inseguro si falta).
 │   │
 │   └── utils/
 │       ├── menuLoader.js      Lee menu.xlsx (SheetJS) → recarga tabla menu_cache.
@@ -122,15 +146,17 @@ bot-comida/
 - **orders** — `id, tenant_id, phone, items (JSON), total, status (pending|confirmed|ready|cancelled), created_at`
 - **conversations** — `id, tenant_id, phone, state, context (JSON), paused, updated_at`. UNIQUE(tenant_id, phone).
 - **menu_cache** — `id, tenant_id, name, price, category, available, loaded_at`. Se borra y recarga entera desde el Excel.
+- **users** — `id, tenant_id, email (UNIQUE), password_hash (bcrypt), created_at`. Login del panel.
 
 Campos JSON (`config`, `items`, `context`) se guardan como TEXT y se parsean en `queries.js`.
 
 ## Variables de entorno (.env)
 
-`PORT` · `ANTHROPIC_API_KEY` · `ADMIN_TOKEN` · `TWILIO_ACCOUNT_SID` · `TWILIO_AUTH_TOKEN` ·
-`TWILIO_WHATSAPP_NUMBER`. Además, código usa `DB_PATH` (ruta de SQLite en prod, p. ej.
-`/data/bot.db` en el volume de Railway) y `DEMO_TENANT_NUMBER` (default `+56900000000`).
-Ver `.env.example` para detalle de cada una.
+`PORT` · `ANTHROPIC_API_KEY` · `JWT_SECRET` (firma de los JWT del panel — **obligatorio en
+prod**, fallback inseguro si falta) · `TWILIO_ACCOUNT_SID` · `TWILIO_AUTH_TOKEN` ·
+`TWILIO_WHATSAPP_NUMBER`. `ADMIN_TOKEN` quedó legacy (reemplazado por el login con JWT).
+Además, código usa `DB_PATH` (ruta de SQLite en prod, p. ej. `/data/bot.db` en el volume de
+Railway) y `DEMO_TENANT_NUMBER` (default `+56900000000`). Ver `.env.example` para detalle.
 
 ## Convenciones
 
@@ -141,10 +167,12 @@ Ver `.env.example` para detalle de cada una.
 
 ## Trampas conocidas (LEER antes de tocar)
 
-- **El panel hardcodea el tenant demo** (`DEMO_TENANT_NUMBER`). El admin/api siempre opera
-  sobre ese único tenant aunque la DB sea multi-tenant. UI multi-tenant requiere login por tenant.
-- **ADMIN_TOKEN está en el front del panel** (`panel/index.html`) — cualquiera con DevTools lo ve.
-  No es seguro para producción real; mover a sesión/cookie.
+- **`JWT_SECRET` tiene un fallback inseguro** (`dev-secret-change-in-prod` en `middleware/auth.js`).
+  Si no se setea la env var en prod, cualquiera puede forjar tokens válidos. Setearla SIEMPRE en Railway.
+- **El rate-limit del login es en memoria** (`Map` en `auth.js`) — se pierde al reiniciar y no
+  sirve con múltiples réplicas. OK para single-instance; migrar a store compartido si se escala.
+- **El admin/api ya es multi-tenant por token** (`req.user.tenantId`), pero el front del panel
+  todavía puede asumir un solo tenant. Verificar el flujo de login→tenant al sumar varios restaurantes.
 - **No se valida la firma de Twilio** (`X-Twilio-Signature`). Cualquiera que descubra la URL del
   webhook puede mandar requests falsas. Falta `twilio.validateRequest()` como middleware.
 - **El webhook ignora media** (stickers/imágenes): responde un texto fijo, no procesa.
@@ -160,4 +188,5 @@ Ver `.env.example` para detalle de cada una.
 ## Próximos pasos sugeridos (del README)
 
 Volume persistente + DB_PATH · verificación de firma de Twilio · notificaciones al dueño ·
-editar menú desde el panel · login real en el panel · migración a Postgres · tests automatizados.
+editar menú desde el panel · migración a Postgres · tests automatizados.
+(✓ login real en el panel — hecho: JWT + tabla users.)
